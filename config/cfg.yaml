@@ -1,0 +1,85 @@
+# -------------------------------------------------------- 数据集设置 --------------------------------------------------------
+target:
+  - "car"
+  - "motor"
+  - "bus"
+  - "truck"
+  - "train"
+  - "traffic sign"
+  - "traffic light"
+  - "rider"
+  - "person"
+  - "bike"
+
+lane:
+  direction:
+    - "background"
+    - "parallel"
+    - "vertical"
+  style:
+    - "background"
+    - "solid"
+    - "dashed"
+  category:
+    - "background"
+    - "crosswalk"
+    - "double other"
+    - "double white"
+    - "double yellow"
+    - "road curb"
+    - "single other"
+    - "single white"
+    - "single yellow"
+  # 000: crosswalk、 001: double other、 010: double white、 011: double yellow
+  # 100: road curb、 101: single other、 110: single white、 111: single yellow
+
+drivable:
+  - "background"
+  - "direct"
+  - "alternative"
+
+# -------------------------------------------------------- 超参数设置 --------------------------------------------------------
+shape: [ 640, 960 ]
+
+anchors:
+  - [ 10,13, 16,30, 33,23 ]  # 8
+  - [ 30,61, 62,45, 59,119 ]  # 16
+  - [ 116,90, 156,198, 373,326 ]  # 32
+
+strides:
+  - 8
+  - 16
+  - 32
+
+box_t: 5  # 目标检测最小像素阈值
+
+# 非极大抑制
+conf_t: 0.25  # 置信度阈值
+iou_t: 0.45  # iou阈值
+max_det: 1000  # 最大检测目标数
+max_box: 30000  # 最大检测框数
+max_wh: 4096  #
+multi_label: True  # 同一网格内是否检测多标签
+merge: False  # 是否采用 Merge-NMS
+
+# 自动锚框
+bps_t: 0.75  # 锚框得分阈值
+anchor_t: 4  # 锚框阈值
+iter: 50  # k-means迭代次数
+gen: 1000  # 进化次数
+mp: 0.9  # 变异概率
+sigma: 0.1  # 变异系数
+
+# 图像增强
+augment: True
+mosaic: True
+affine: True
+hsv: 0.5
+flipud: 0
+fliplr: 0.5
+scale: 0.5
+translate: 0.1
+h: 0.015
+s: 0.7
+v: 0.4
+wh_rt: 10
