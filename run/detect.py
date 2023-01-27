@@ -2,10 +2,10 @@ import os
 import cv2
 import torch
 import numpy as np
-from util import time_sync
+from utils.util import time_sync
 from collections import Counter
-from tools import load_model
-from box import non_max_suppression
+from model.tools import load_model
+from utils.box import non_max_suppression
 
 
 def pre_process(img, new_shape, stride, half, device):

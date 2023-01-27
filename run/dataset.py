@@ -5,9 +5,9 @@ import random
 import imagesize
 import numpy as np
 from tqdm import tqdm
-from util import to_one_hot
+from utils.util import to_one_hot
 from torch.utils.data import Dataset
-from box import xywh_norm2xyxy, xyxy2xywh_norm
+from utils.box import xywh_norm2xyxy, xyxy2xywh_norm
 
 
 def build_labels(input_file, output_file, image_dir, cfg):

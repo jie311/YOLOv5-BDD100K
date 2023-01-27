@@ -5,11 +5,10 @@ from box import bbox_iou
 
 class FocalLoss(nn.Module):
     def __init__(self, loss_fn, alpha, gamma):
-        super().__init__()
-        self.loss_fn = loss_fn
+        super(FocalLoss, self).__init__()
         self.alpha = alpha
         self.gamma = gamma
-        self.reduction = loss_fn.reduction
+        self.loss_fn = loss_fn
         self.loss_fn.reduction = 'none'
 
     def forward(self, pred, label):
@@ -20,35 +19,33 @@ class FocalLoss(nn.Module):
         alpha_t = label * self.alpha + (1 - label) * (1 - self.alpha)
         loss *= alpha_t * (1.0 - p_t) ** self.gamma
 
-        if self.reduction == 'mean':
-            return loss.mean()
-        elif self.reduction == 'sum':
-            return loss.sum()
-        else:
-            return loss
+        return loss.mean()
 
 
 class Loss:
-    def __init__(self, cfg, device):
-        anchors = torch.tensor(cfg['anchors'], device=device)
-        self.anchors = anchors.view(len(anchors), -1, 2)
-        self.strides = torch.tensor(cfg['strides'], device=device)
-        self.anchor_t = cfg['anchor_t']
-        self.iou_rate = cfg['iou_rate']
+    def __init__(self, anchors, strides, anchor_t, iou_rate, obj_pw, cls_pw,
+                 alpha, gamma, smooth, balance, box_w, obj_w, cls_w, device):
+        self.anchors = anchors
+        self.strides = strides
+        self.anchor_t = anchor_t
+        self.iou_rate = iou_rate
+        self.box_w = box_w
+        self.obj_w = obj_w
+        self.cls_w = cls_w
         self.device = device
 
-        bce_obj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([cfg['obj_pw']], device=device))
-        bce_cls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([cfg['cls_pw']], device=device))
+        bce_obj = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([obj_pw], device=device))
+        bce_cls = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([cls_pw], device=device))
 
-        if cfg['alpha'] or cfg['gamma']:
-            bce_obj = FocalLoss(bce_obj, cfg['alpha'], cfg['gamma'])
-            bce_cls = FocalLoss(bce_cls, cfg['alpha'], cfg['gamma'])
+        if alpha or gamma:
+            bce_obj = FocalLoss(bce_obj, alpha, gamma)
+            bce_cls = FocalLoss(bce_cls, alpha, gamma)
 
         self.bce_obj = bce_obj
         self.bce_cls = bce_cls
 
-        self.pos, self.neg = 1.0 - 0.5 * cfg['smooth'], 0.5 * cfg['smooth']
-        self.balance = cfg['balance']  # 3 layers: [4.0, 1.0, 0.4];  5 layers: [4.0, 1.0, 0.25, 0.06, 0.02]
+        self.pos, self.neg = 1.0 - 0.5 * smooth, 0.5 * smooth
+        self.balance = balance  # 3 layers: [4.0, 1.0, 0.4];  5 layers: [4.0, 1.0, 0.25, 0.06, 0.02]
 
     def __call__(self, preds, targets):
         box_loss = torch.zeros(1, device=self.device)
@@ -59,7 +56,6 @@ class Loss:
 
         for i, p in enumerate(preds):
             img, anchor_idx, grid_j, grid_i = t_indices[i]
-            t_obj = torch.zeros(p.shape[:4], device=self.device)
 
             num = len(img)
             if num:
@@ -69,19 +65,32 @@ class Loss:
                 p_xy = pt[:, :2] * 2 - 0.5
                 p_wh = (pt[:, 2:4] * 2) ** 2 * t_anchors[i]
                 p_box = torch.cat((p_xy, p_wh), 1)
-
+                
+                # TODO xywh2xyxy
                 iou = bbox_iou(p_box, t_boxes[i], type='CIoU')
                 box_loss += (1.0 - iou).mean()
 
                 # obj loss
-                iou = iou.detach().clamp(0).type(t_obj.dtype)
-                t_obj[img, ac_index, grid_j, grid_i] = (1.0 - self.iou_rate) + self.iou_rate * iou
-                obj_loss += self.bce_obj(p[:, :, :, :, 4], t_obj) * self.balance[i]
+                iou = iou.detach().clamp(0)
+                obj = torch.zeros_like(p[:, :, :, :, 0], device=self.device)
+                obj[img, anchor_idx, grid_j, grid_i] = (1.0 - self.iou_rate) + self.iou_rate * iou
+                obj_loss += self.bce_obj(p[:, :, :, :, 4], obj) * self.balance[i]
 
-                # # cls loss
-                # t_cls = torch.full_like(p_cls, self.neg, device=self.device)
-                # t_cls[range(num), tcls[i]] = self.pos
-                # cls_loss += self.bce_cls(p_cls, t_cls)
+                # cls loss
+                cls = torch.full_like(pt[:, 5:], self.neg, device=self.device)
+                cls[range(num), t_cls[i]] = self.pos
+                cls_loss += self.bce_cls(pt[:, 5:], cls)
+
+            else:
+                # obj loss
+                obj = torch.zeros_like(p[:, :, :, :, 0], device=self.device)
+                obj_loss += self.bce_obj(p[:, :, :, :, 4], obj) * self.balance[i]
+
+        box_loss *= self.box_w
+        obj_loss *= self.obj_w
+        cls_loss *= self.cls_w
+
+        return (box_loss + obj_loss + cls_loss) * len(obj), torch.cat((box_loss, obj_loss, cls_loss)).detach()
 
     def build_targets(self, preds, targets):
         t_cls, t_boxes, t_indices, t_anchors = [], [], [], []
@@ -130,6 +139,7 @@ class Loss:
 
         return t_cls, t_boxes, t_indices, t_anchors
 
+
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 preds = torch.ones([1, 16, 3, 80, 80, 80])
@@ -143,4 +153,3 @@ cfg = {'anchors': [[32, 64, 64, 128, 128, 256]], 'strides': [8], 'anchor_t': 4,
 loss = Loss(cfg, device)
 
 loss.build_targets(preds, targets)
-
