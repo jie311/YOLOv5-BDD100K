@@ -12,13 +12,12 @@ from yolo5 import YOLO5
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--label_file', type=str, default='../bdd100k/labels/bdd100k_labels_images_%s.json')
-    parser.add_argument('--yolo_label_file', type=str, default='../bdd100k/yolo_labels/%s.txt')
+    parser.add_argument('--label_file', type=str, default='../bdd100k/labels/%s.txt')
     parser.add_argument('--image_dir', type=str, default='../bdd100k/images/%s')
     parser.add_argument('--lane_dir', type=str, default='../bdd100k/lane/masks/%s')
     parser.add_argument('--drivable_dir', type=str, default='../bdd100k/drivable/masks/%s')
     parser.add_argument('--lane_type', type=str, default='category')
-    parser.add_argument('--data_file', type=str, default='../config/data.yaml')
+    parser.add_argument('--data_file', type=str, default='../config/bdd100k.yaml')
     parser.add_argument('--hyp_file', type=str, default='../config/hyp.yaml')
     parser.add_argument('--log_dir', type=str, default='../log_dir/train')
     parser.add_argument('--pretrain_dir', type=str, default='')
@@ -31,18 +30,6 @@ def train():
 
 
 def main():
-    # 配置信息
-    opt = parse_opt()
-    cfg = yaml.safe_load(open(opt.cfg_file, encoding="utf-8"))
-    cfg = yaml.safe_load(open(opt.cfg_file, encoding="utf-8"))
-
-    if not os.path.exists(opt.yolo_label_file % 'train') or not os.path.exists(opt.yolo_label_file % 'val'):
-        print('build yolo labels')
-
-        build_labels(opt.label_file % ('train'), opt.yolo_label_file % ('train'),
-                     opt.image_dir % ('train'), cfg['target'])
-        build_labels(opt.label_file % ('val'), opt.yolo_label_file % ('val'), opt.image_dir % ('val'), cfg['target'])
-
     # 加载数据集
     dataset = LoadDataset(opt.image_dir % ('train'), opt.lane_dir % ('train'), opt.drivable_dir % ('train'),
                           opt.lane_type, opt.yolo_label_file % ('train'), cfg)
@@ -74,4 +61,19 @@ def main():
         plot_images(imgs, lanes, drivables, opt.lane_type, labels, log_dir + '/imgs/' + str(index) + '.jpg')
 
 
-main()
+if __name__ == "__main__":
+    # 配置信息
+    opt = parse_opt()
+    cfg = yaml.safe_load(open(opt.data_file, encoding="utf-8"))
+    hyp = yaml.safe_load(open(opt.hyp_file, encoding="utf-8"))
+
+    # 生成标签
+    if not os.path.exists(opt.label_file % 'train') or not os.path.exists(opt.label_file % 'val'):
+        print('build yolo labels')
+
+        build_labels((opt.label_file % ('train')).replace('txt', 'json'),
+                     opt.label_file % ('train'), opt.image_dir % ('train'), cfg['obj'])
+        build_labels((opt.label_file % ('val')).replace('txt', 'json'),
+                     opt.label_file % ('val'), opt.image_dir % ('val'), cfg['obj'])
+
+
