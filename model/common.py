@@ -116,9 +116,9 @@ class Anchor(nn.Module):
             C = 5 + self.num_cls
 
             x[i] = x[i].view(B, A, C, H, W).permute(0, 1, 3, 4, 2).contiguous()  # batch、anchor、high、width、channel
-            x[i] = x[i].sigmoid()
 
             if not self.train:
+                x[i] = x[i].sigmoid()
                 if self.grid[i].shape[2:4] != x[i].shape[2:4]:
                     self.grid[i], self.ac_grid[i] = self.make_grid(A, H, W, i)
 

@@ -1,0 +1,56 @@
+anchors: # 预设锚框
+  - [ 10,13, 16,30, 33,23 ]  # 8
+  - [ 30,61, 62,45, 59,119 ]  # 16
+  - [ 116,90, 156,198, 373,326 ]  # 32
+
+strides: # FeatureMap步长
+  - 8
+  - 16
+  - 32
+
+shape: [ 640, 960 ] # 输入图像尺寸
+
+box_t: 5 # 最小检测目标尺寸
+
+# 图像增强
+augment: True # 是否采用图像增强
+mosaic: True # 是否采用Mosaic
+affine: True # 是否采用仿射变换
+hsv: 0.5 # 随机HSV增强
+flipud: 0 # 随机上下翻转
+fliplr: 0.5 # 随机左右翻转
+scale: 0.5 # 仿射变换：图像尺寸放缩
+translate: 0.1 # 仿射变换：图像平移
+h: 0.015  # HSV：H
+s: 0.7 # HSV：S
+v: 0.4 # HSV：V
+wh_rt: 10 # 目标长宽比过滤阈值
+
+# 生成锚框
+bps_t: 0.75  # 锚框得分阈值
+anchor_t: 4  # 锚框阈值
+iter: 50  # k-means迭代次数
+gen: 1000  # 进化次数
+mp: 0.9  # 变异概率
+sigma: 0.1  # 变异系数
+
+# 损失函数
+iou_rate: 1 # 损失函数中iou的权重
+obj_pw: 1 # obj正样本权重
+cls_pw: 1 # cls正样本权重
+alpha: 0.25 #FocalLoss参数
+gamma: 1.5 #FocalLoss参数
+smooth: 0.1 # 正负样本平滑参数
+balance: [ 4.0, 1.0, 0.4 ] #多层Featurmap损失函数权重; 3layer [ 4.0, 1.0, 0.4 ], 5layer [4.0, 1.0, 0.25, 0.06, .02]
+
+# 训练参数
+
+
+# 非极大抑制
+conf_t: 0.25  # 置信度阈值
+iou_t: 0.45  # iou阈值
+max_det: 1000  # 最大检测目标数
+max_box: 30000  # 最大检测框数
+max_wh: 4096  #
+multi_label: True  # 同一网格内是否检测多标签
+merge: False  # 是否采用 Merge-NMS

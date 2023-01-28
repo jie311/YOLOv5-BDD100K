@@ -18,8 +18,9 @@ def parse_opt():
     parser.add_argument('--lane_dir', type=str, default='../bdd100k/lane/masks/%s')
     parser.add_argument('--drivable_dir', type=str, default='../bdd100k/drivable/masks/%s')
     parser.add_argument('--lane_type', type=str, default='category')
-    parser.add_argument('--cfg_file', type=str, default='../config/cfg.yaml')
-    parser.add_argument('--log_dir', type=str, default='../dir/train')
+    parser.add_argument('--data_file', type=str, default='../config/data.yaml')
+    parser.add_argument('--hyp_file', type=str, default='../config/hyp.yaml')
+    parser.add_argument('--log_dir', type=str, default='../log_dir/train')
     parser.add_argument('--pretrain_dir', type=str, default='')
 
     return parser.parse_args()
@@ -33,6 +34,7 @@ def main():
     # 配置信息
     opt = parse_opt()
     cfg = yaml.safe_load(open(opt.cfg_file, encoding="utf-8"))
+    cfg = yaml.safe_load(open(opt.cfg_file, encoding="utf-8"))
 
     if not os.path.exists(opt.yolo_label_file % 'train') or not os.path.exists(opt.yolo_label_file % 'val'):
         print('build yolo labels')
@@ -45,7 +47,7 @@ def main():
     dataset = LoadDataset(opt.image_dir % ('train'), opt.lane_dir % ('train'), opt.drivable_dir % ('train'),
                           opt.lane_type, opt.yolo_label_file % ('train'), cfg)
 
-    loader = torch.utils.data.DataLoader(dataset, batch_size=16, num_workers=2,
+    loader = torch.utils.data.DataLoader(dataset, batch_size=4, num_workers=1,
                                          shuffle=True, collate_fn=LoadDataset.collate_fn)
 
     # 选择设备
@@ -57,7 +59,7 @@ def main():
         os.makedirs(log_dir + '/weights')
         os.makedirs(log_dir + '/imgs')
 
-        plot_labels(dataset.labels, cfg['target'], log_dir + '/label.jpg')
+        plot_labels(dataset.labels, cfg['obj'], log_dir + '/label.jpg')
 
         model = YOLO5(cfg['anchors'], cfg['strides'], len(cfg['target']), device, True)
         check_anchors(dataset, model, max(cfg['shape']), cfg['box_t'], cfg['bps_t'], cfg['anchor_t'],

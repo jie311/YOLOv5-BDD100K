@@ -1,0 +1,38 @@
+obj:
+  - "car"
+  - "motor"
+  - "bus"
+  - "truck"
+  - "train"
+  - "traffic sign"
+  - "traffic light"
+  - "rider"
+  - "person"
+  - "bike"
+
+lane:
+  direction:
+    - "background"
+    - "parallel"
+    - "vertical"
+  style:
+    - "background"
+    - "solid"
+    - "dashed"
+  category:
+    - "background"
+    - "crosswalk"
+    - "double other"
+    - "double white"
+    - "double yellow"
+    - "road curb"
+    - "single other"
+    - "single white"
+    - "single yellow"
+  # 000: crosswalk、 001: double other、 010: double white、 011: double yellow
+  # 100: road curb、 101: single other、 110: single white、 111: single yellow
+
+drivable:
+  - "background"
+  - "direct"
+  - "alternative"
